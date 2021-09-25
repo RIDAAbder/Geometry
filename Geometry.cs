@@ -513,5 +513,59 @@ namespace RevitUtils.Logic
             var maxZ = points.Max(o => o.Z);
             return new BoundingBoxXYZ() { Min = new XYZ(minX, minY, minZ), Max = new XYZ(maxX, maxY, maxZ) };
         }
+        /// <summary>
+        /// check that the point M is inside the triangle ABC
+        /// </summary>
+        /// <param name="m"></param>
+        /// <param name="a"></param>
+        /// <param name="b"></param>
+        /// <param name="c"></param>
+        /// <returns></returns>
+        public bool CheckPointMInsideTraingle(Point m, Point a, Point b, Point c)
+        {
+            /
+            double condVal = -tolerance * 400;
+            double mX = m.cordonnes.X;
+            double mY = m.cordonnes.Y;
+            double aX = a.cordonnes.X;
+            double aY = a.cordonnes.Y;
+            double bX = b.cordonnes.X;
+            double bY = b.cordonnes.Y;
+            double cX = c.cordonnes.X;
+            double cY = c.cordonnes.Y;
+            //Test1 det((AB) , (AM)) x det((AM) , (AC)) > 0
+            //Test2 det((BA) ,(BM)) x det((BM) ,(BC)) > 0 [pemutation A'<-B /  B'<-A ]
+            //Test3 det((CA) , (CM)) x det((CM) , (CB)) > 0 [pemutation B'<-C / C<-B' ]
+            double t1 = (((aX - bX) * (aY - mY)) - ((aY - bY) * (aX - mX))) * (((aX - mX) * (aY - cY)) - ((aY - mY) * (aX - cX)));
+            double t2 = (((bX - aX) * (bY - mY)) - ((bY - aY) * (bX - mX))) * (((bX - mX) * (bY - cY)) - ((bY - mY) * (bX - cX)));
+            double t3 = (((cX - aX) * (cY - mY)) - ((cY - aY) * (cX - mX))) * (((cX - mX) * (cY - bY)) - ((cY - mY) * (cX - bX)));
+
+            return (t1 >= condVal && t2 >= condVal && t3 >= condVal) || (t1 <= condVal && t2 <= condVal && t3 <= condVal);
+        }
+        /// <summary>
+        /// Get the list of points of a room
+        /// </summary>
+        /// <param name="room"></param>
+        /// <returns></returns>
+        public List<XYZ> GetRoomPoints(Room room)
+        {
+            var points = new List<XYZ>();
+            var xyzcomparator = new XyzComparator();
+            var opt = new SpatialElementBoundaryOptions();
+            opt.SpatialElementBoundaryLocation = SpatialElementBoundaryLocation.Center;
+            var loops = room.GetBoundarySegments(opt);
+            foreach (var seg in loops[0])
+            {
+                var curve = seg.GetCurve();
+                XYZ p;
+                XYZ q = null;
+                p = curve.GetEndPoint(0);
+                q = curve.GetEndPoint(1);
+                if (!points.Contains(p, xyzcomparator)) points.Add(p);
+                if (!points.Contains(q, xyzcomparator)) points.Add(q);
+            }
+            return points.Distinct(xyzcomparator).ToList();
+        }
+
     }
 }
